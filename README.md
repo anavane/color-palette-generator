@@ -1,11 +1,11 @@
-# 🎨 Color Palette Generator
+# 🎨 Color Palette Generator with TheColorAPI
 
-An interactive Streamlit app that extracts color palettes from artworks or photos.
+This Streamlit app connects to the real open API "TheColorAPI" to generate color palettes based on a base color.
 
-## 💡 How it works
-1. Upload an image (JPG, PNG).
-2. The app analyzes it using `colorthief` to extract dominant colors.
-3. View the generated palette with HEX and RGB values.
+## 🔑 Features
+- Requires an API key for access.
+- Uses TheColorAPI endpoint.
+- Generates dynamic color palettes with HEX codes.
 
 ## 🚀 Run locally
 ```bash
