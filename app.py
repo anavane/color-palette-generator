@@ -1,52 +1,61 @@
 # app.py
 import streamlit as st
-from PIL import Image
-from io import BytesIO
-from colorthief import ColorThief
+import requests
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="🎨 Color Palette Generator", page_icon="🎨", layout="centered")
+# --- Page setup ---
+st.set_page_config(page_title="🎨 Color Palette Generator (API)", page_icon="🎨", layout="centered")
+st.title("🎨 Color Palette Generator with TheColorAPI")
+st.caption("Genera una paleta de colores conectada a una API real, usando una clave secreta (API KEY).")
 
-st.title("🎨 Color Palette Generator from Artwork")
-st.caption("Sube una imagen (pintura, ilustración o fotografía) y descubre su paleta de colores principales.")
+# --- API Key Verification ---
+st.subheader("🔑 Acceso con API Key")
 
-# --- Upload image ---
-uploaded_file = st.file_uploader("📁 Sube tu imagen", type=["jpg", "jpeg", "png"])
+user_key = st.text_input("Introduce tu API Key:", type="password")
 
-if uploaded_file:
-    # Mostrar imagen original
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Imagen cargada", use_column_width=True)
+# Secret key stored in Streamlit
+SECRET_KEY = st.secrets["colorapi"]["API_KEY"]
 
-    # Convertir imagen a formato que pueda leer ColorThief
-    img_bytes = BytesIO()
-    image.save(img_bytes, format='PNG')
-    img_bytes.seek(0)
-
-    # Extraer colores
-    color_thief = ColorThief(img_bytes)
-    palette = color_thief.get_palette(color_count=6)
-
-    st.subheader("🎨 Paleta de colores principal")
-
-    # Mostrar paleta
-    fig, ax = plt.subplots(figsize=(8, 2))
-    for i, color in enumerate(palette):
-        ax.add_patch(plt.Rectangle((i, 0), 1, 1, color=[c/255 for c in color]))
-    ax.set_xlim(0, len(palette))
-    ax.set_ylim(0, 1)
-    ax.axis("off")
-    st.pyplot(fig)
-
-    # Mostrar códigos RGB/HEX
-    st.subheader("🧾 Códigos de color")
-    cols = st.columns(len(palette))
-    for i, color in enumerate(palette):
-        r, g, b = color
-        hex_code = '#%02x%02x%02x' % (r, g, b)
-        with cols[i]:
-            st.markdown(f"**{hex_code.upper()}**")
-            st.markdown(f"RGB: ({r}, {g}, {b})")
-            st.color_picker("", hex_code, key=i)
+if user_key == "":
+    st.info("👆 Ingresa tu API key para continuar.")
+elif user_key != SECRET_KEY:
+    st.error("❌ Clave incorrecta.")
 else:
-    st.info("👆 Sube una imagen para generar la paleta de colores.")
+    st.success("✅ Clave correcta. ¡Bienvenido al generador de paletas!")
+
+    st.markdown("---")
+    st.subheader("🎨 Genera una paleta desde un color base")
+
+    base_color = st.color_picker("Elige un color base:", "#FF5733")
+    count = st.slider("Número de colores en la paleta:", 3, 8, 5)
+
+    # Convertir color HEX a formato sin #
+    color_hex = base_color.replace("#", "")
+
+    # Llamada a TheColorAPI
+    url = f"https://www.thecolorapi.com/scheme?hex={color_hex}&mode=analogic&count={count}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        colors = [c["hex"]["value"] for c in data["colors"]]
+
+        # Mostrar paleta
+        st.subheader("🌈 Paleta generada desde TheColorAPI")
+        fig, ax = plt.subplots(figsize=(8, 2))
+        for i, color in enumerate(colors):
+            ax.add_patch(plt.Rectangle((i, 0), 1, 1, color=color))
+        ax.set_xlim(0, len(colors))
+        ax.set_ylim(0, 1)
+        ax.axis("off")
+        st.pyplot(fig)
+
+        # Mostrar códigos de color
+        st.subheader("🧾 Códigos de color (HEX)")
+        cols = st.columns(len(colors))
+        for i, color in enumerate(colors):
+            with cols[i]:
+                st.markdown(f"**{color}**")
+                st.color_picker("", color, key=i)
+    else:
+        st.error("Error al conectar con TheColorAPI. Intenta más tarde.")
